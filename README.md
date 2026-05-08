@@ -21,7 +21,7 @@ The benchmark JSON files live at `../do-undo-bench/` when commands are run from 
 
 ## Data Requirements
 
-Do-Undo-Bench contains annotations only. You also need the EPIC-KITCHENS RGB frames arranged like:
+Do-Undo-Bench[https://huggingface.co/datasets/doundo/doundobench] contains annotations only. You also need the EPIC-KITCHENS RGB frames arranged like:
 
 ```text
 <EPIC_FRAMES_ROOT>/<participant_id>/rgb_frames/<video_id>/frame_0000001810.jpg
@@ -128,3 +128,4 @@ Both scripts read Do-Undo-Bench JSON rows with these fields:
 - `forward_prompt`, `reverse_prompt`
 
 Older CSV-style inputs are still partially supported through deprecated `--csv_path` / `--input_csv` aliases, but the recommended input is `../do-undo-bench/annotations_test.json` or `../do-undo-bench/annotations_train.json`.
+

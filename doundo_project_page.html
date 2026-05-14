@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Do-Undo Bench: Reversibility for Action Understanding in Image Generation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 16px; }
+body {
+  font-family: 'Noto Sans', sans-serif;
+  background: #fff;
+  color: #363636;
+  margin: 0;
+  line-height: 1.6;
+}
+a { color: #3273dc; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* NAV */
+.navbar {
+  background: #fff;
+  border-bottom: 1px solid #ededed;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  height: 3.25rem;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.navbar-brand { font-weight: 700; font-size: 1rem; color: #363636; font-family: 'Google Sans', sans-serif; }
+.navbar-menu { display: flex; gap: 1.5rem; margin-left: auto; }
+.navbar-menu a { font-size: 0.875rem; color: #4a4a4a; }
+
+/* HERO */
+.hero-body { text-align: center; padding: 3rem 1.5rem 2.5rem; background: #fff; }
+.publication-title {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1a1a1a;
+  margin-bottom: 1.25rem;
+}
+.publication-authors {
+  font-size: 1rem;
+  color: #4a4a4a;
+  margin-bottom: 0.4rem;
+  line-height: 2;
+}
+.publication-authors sup { font-size: 0.68rem; color: #888; }
+.equal-contrib { font-size: 0.78rem; color: #888; margin-bottom: 0.4rem; }
+.publication-affiliations { font-size: 0.88rem; color: #777; margin-bottom: 1rem; }
+.publication-affiliations sup { font-size: 0.68rem; }
+.venue-badge {
+  display: inline-block;
+  background: #f5f5f5;
+  border: 1px solid #dbdbdb;
+  border-radius: 4px;
+  font-family: 'Google Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #363636;
+  padding: 0.3rem 0.9rem;
+  margin-bottom: 1.5rem;
+}
+.publication-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+.link-block a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #363636;
+  color: #fff !important;
+  border-radius: 4px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.875rem;
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 500;
+  transition: background 0.15s;
+  text-decoration: none !important;
+}
+.link-block a:hover { background: #111; }
+
+/* LAYOUT */
+.section { padding: 3rem 1.5rem; }
+.container { max-width: 960px; margin: 0 auto; }
+hr.divider { border: none; border-top: 1px solid #ededed; margin: 0; }
+
+h2.title {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+h3.subtitle {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #363636;
+  margin: 1.5rem 0 0.75rem;
+  text-align: left;
+}
+p { font-size: 1rem; line-height: 1.75; color: #4a4a4a; margin-bottom: 1rem; }
+p:last-child { margin-bottom: 0; }
+
+/* TASK DIAGRAM */
+.task-diagram {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid #dbdbdb;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 2rem 0;
+}
+.task-cell { flex: 1; padding: 1.5rem 1rem; text-align: center; border-right: 1px solid #dbdbdb; }
+.task-cell:last-child { border-right: none; }
+.task-icon { font-size: 2.2rem; margin-bottom: 0.5rem; }
+.task-label {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #aaa;
+  margin-bottom: 0.35rem;
+}
+.task-label.do { color: #2c6fad; }
+.task-label.undo { color: #c0392b; }
+.task-desc { font-size: 0.78rem; color: #777; line-height: 1.4; }
+.task-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.6rem;
+  color: #ccc;
+  font-size: 1.2rem;
+  gap: 3px;
+}
+.task-arrow span { font-size: 0.6rem; color: #bbb; font-family: 'Google Sans', sans-serif; text-align: center; line-height: 1.3; }
+
+/* STATS */
+.stats-row {
+  display: flex;
+  border: 1px solid #dbdbdb;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 2rem 0;
+  text-align: center;
+}
+.stat-item { flex: 1; padding: 1.5rem 1rem; border-right: 1px solid #dbdbdb; }
+.stat-item:last-child { border-right: none; }
+.stat-number {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
+  margin-bottom: 0.4rem;
+}
+.stat-label { font-size: 0.78rem; color: #888; line-height: 1.35; }
+
+/* PIPELINE */
+.pipeline-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.step-card { border: 1px solid #dbdbdb; border-radius: 6px; padding: 1.1rem; }
+.step-number {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #dbdbdb;
+  line-height: 1;
+  margin-bottom: 0.4rem;
+}
+.step-title { font-family: 'Google Sans', sans-serif; font-size: 0.85rem; font-weight: 600; color: #363636; margin-bottom: 0.35rem; }
+.step-desc { font-size: 0.78rem; color: #777; line-height: 1.5; }
+
+/* ACTION TAGS */
+.action-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin: 1.25rem 0; }
+.action-tag {
+  border: 1px solid #dbdbdb;
+  border-radius: 4px;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.8rem;
+  color: #4a4a4a;
+  background: #fafafa;
+  font-family: 'Google Sans', sans-serif;
+}
+.action-tag .verb { color: #3273dc; font-weight: 600; }
+.action-tag .count { color: #aaa; margin-left: 3px; }
+
+/* PROMPT PAIR */
+.prompt-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+.prompt-card {
+  border: 1px solid #dbdbdb;
+  border-radius: 6px;
+  padding: 1rem 1.1rem;
+  background: #fafafa;
+}
+.prompt-card.do { border-left: 3px solid #2c6fad; }
+.prompt-card.undo { border-left: 3px solid #c0392b; }
+.prompt-header {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.prompt-header.do { color: #2c6fad; }
+.prompt-header.undo { color: #c0392b; }
+.prompt-body { font-size: 0.82rem; color: #4a4a4a; line-height: 1.6; }
+
+/* RESULTS TABLE */
+.table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+table.results { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+table.results thead th {
+  background: #f5f5f5;
+  border-bottom: 2px solid #dbdbdb;
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  font-family: 'Google Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #4a4a4a;
+  white-space: nowrap;
+}
+table.results thead th.do-col { color: #2c6fad; }
+table.results thead th.undo-col { color: #c0392b; }
+table.results td {
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #4a4a4a;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+table.results td.model { font-weight: 600; color: #1a1a1a; }
+table.results tr.ours { background: #f0f6ff; }
+table.results tr.ours td { color: #1a1a1a; }
+table.results td.best { color: #2c6fad; font-weight: 700; }
+table.results tr:last-child td { border-bottom: none; }
+.table-caption {
+  font-size: 0.8rem;
+  color: #888;
+  text-align: center;
+  margin-top: 0.4rem;
+  font-style: italic;
+}
+
+/* FINDING */
+.finding {
+  background: #f0f6ff;
+  border-left: 4px solid #3273dc;
+  border-radius: 0 6px 6px 0;
+  padding: 0.9rem 1.1rem;
+  margin: 1.25rem 0;
+  font-size: 0.9rem;
+  color: #363636;
+  line-height: 1.6;
+}
+
+/* CONTRIBUTIONS */
+.contrib-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+.contrib-card { border: 1px solid #dbdbdb; border-radius: 6px; padding: 1.1rem; }
+.contrib-num {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #aaa;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.3rem;
+}
+.contrib-title { font-family: 'Google Sans', sans-serif; font-size: 0.875rem; font-weight: 600; color: #1a1a1a; margin-bottom: 0.3rem; }
+.contrib-body { font-size: 0.8rem; color: #666; line-height: 1.5; }
+
+/* METRICS */
+.metrics-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+.metrics-group { border: 1px solid #dbdbdb; border-radius: 6px; padding: 1.1rem; }
+.metrics-group-title {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #ededed;
+}
+.metric-row { display: flex; gap: 0.65rem; margin-bottom: 0.55rem; align-items: flex-start; }
+.metric-row:last-child { margin-bottom: 0; }
+.metric-name { font-family: 'Google Sans', sans-serif; font-size: 0.78rem; font-weight: 700; color: #3273dc; min-width: 55px; }
+.metric-desc { font-size: 0.78rem; color: #666; line-height: 1.4; }
+
+/* BIBTEX */
+.bibtex-block {
+  background: #f5f5f5;
+  border: 1px solid #dbdbdb;
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.82rem;
+  color: #363636;
+  overflow-x: auto;
+  white-space: pre;
+  line-height: 1.7;
+}
+
+/* FOOTER */
+footer {
+  background: #fafafa;
+  border-top: 1px solid #ededed;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #888;
+  line-height: 1.9;
+}
+
+@media (max-width: 680px) {
+  .publication-title { font-size: 1.6rem; }
+  .pipeline-steps { grid-template-columns: 1fr 1fr; }
+  .contrib-grid { grid-template-columns: 1fr; }
+  .metrics-cols { grid-template-columns: 1fr; }
+  .stats-row { flex-direction: column; }
+  .stat-item { border-right: none; border-bottom: 1px solid #dbdbdb; }
+  .stat-item:last-child { border-bottom: none; }
+  .task-diagram { flex-direction: column; }
+  .task-cell { border-right: none; border-bottom: 1px solid #dbdbdb; }
+  .task-cell:last-child { border-bottom: none; }
+  .prompt-pair { grid-template-columns: 1fr; }
+  .navbar-menu { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero-body">
+  <div class="container">
+
+    <h1 class="publication-title">
+      Do-Undo Bench: Reversibility for Action<br>Understanding in Image Generation
+    </h1>
+
+    <div class="publication-authors">
+      Shweta Mahajan<sup>1,2*</sup>&ensp;
+      Shreya Kadambi<sup>3*</sup>&ensp;
+      Hoang Le<sup>3</sup>&ensp;
+      Rajeev Yasarla<sup>3</sup>&ensp;
+      Apratim Bhattacharyya<sup>3</sup>&ensp;
+      Munawar Hayat<sup>3</sup>&ensp;
+      Fatih Porikli<sup>3</sup>
+    </div>
+
+    <div class="equal-contrib">* Equal contribution</div>
+
+    <div class="publication-affiliations">
+      <sup>1</sup>York University &ensp;
+      <sup>2</sup>Vector Institute for AI &ensp;
+      <sup>3</sup>Qualcomm AI Research
+    </div>
+
+    <div class="publication-links">
+      <div class="link-block">
+        <a href="#">
+          <i class="fas fa-file-pdf"></i> Paper
+        </a>
+      </div>
+      <div class="link-block">
+        <a href="https://github.com/s-mahajan/Do-Undo-Bench">
+          <i class="fab fa-github"></i> Code
+        </a>
+      </div>
+      <div class="link-block">
+        <a href="https://huggingface.co/datasets/doundo/doundobench">
+          🤗 Dataset
+        </a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ABSTRACT -->
+<section class="section" id="abstract">
+  <div class="container">
+    <h2 class="title">Abstract</h2>
+    <p>
+      We introduce the <strong>Do-Undo task and benchmark</strong> to address a critical gap in vision-language models: understanding and generating plausible scene transformations driven by real-world actions. Unlike prior work that relies on prompt-based image generation and editing to perform action-conditioned image manipulation, our training hypothesis requires models to <strong>simulate the outcome of a real-world action and then reverse it to the original state</strong>. This forward–reverse requirement tests genuine cause-and-effect understanding rather than stylistic or semantic edits.
+    </p>
+    <p>
+      We curate a high-quality benchmark of reversible actions from real-world scenarios to enable robust action grounding. Our experiments reveal that current models struggle with action reversibility, highlighting the need to evaluate action understanding. Do-Undo provides an intuitive testbed for evaluating and advancing <strong>action-aware generation</strong> in multimodal systems that must reason about real-world dynamics.
+    </p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- TASK -->
+<section class="section" id="task">
+  <div class="container">
+    <h2 class="title">The Do-Undo Task</h2>
+    <p style="text-align:center">
+      A model that genuinely understands physical actions should be able to reverse an action it has just performed. This seemingly simple requirement exposes fundamental failures in current state-of-the-art models.
+    </p>
+
+    <div class="task-diagram">
+      <div class="task-cell">
+        <div class="task-label">Input State</div>
+        <div class="task-icon">🚪</div>
+        <div class="task-desc">Initial scene.<br>Action not yet performed.</div>
+      </div>
+      <div class="task-arrow">
+        <span>Forward prompt</span>
+        <span>→</span>
+        <span class="task-label do" style="font-size:0.65rem">Do</span>
+      </div>
+      <div class="task-cell">
+        <div class="task-label do">Do (Forward)</div>
+        <div class="task-icon">✅</div>
+        <div class="task-desc">Action performed.<br>Scene state updated.</div>
+      </div>
+      <div class="task-arrow">
+        <span>Reverse prompt</span>
+        <span>←</span>
+        <span class="task-label undo" style="font-size:0.65rem">Undo</span>
+      </div>
+      <div class="task-cell">
+        <div class="task-label undo">Undo (Reverse)</div>
+        <div class="task-icon">🔁</div>
+        <div class="task-desc">Action reversed.<br>Must match input state.</div>
+      </div>
+    </div>
+
+    <div class="finding">
+      <strong>Key insight:</strong> Reversible actions are the acid test for physical understanding. "Cut the paper" is irreversible — the model cannot be tested. "Open the drawer" is reversible — a model that truly understands the action should generate both the forward and undo states consistently, preserving scene context throughout.
+    </div>
+
+    <h3 class="subtitle">Example Prompt Pair</h3>
+    <div class="prompt-pair">
+      <div class="prompt-card do">
+        <div class="prompt-header do">▶ Forward Prompt</div>
+        <div class="prompt-body">"Open the drawer with left hand by pulling it backward until it is fully opened. The drawer is a wooden kitchen drawer located beneath the countertop, currently in a closed position. The user's left hand should grip the front edge of the drawer and pull it smoothly outward."</div>
+      </div>
+      <div class="prompt-card undo">
+        <div class="prompt-header undo">◀ Reverse Prompt</div>
+        <div class="prompt-body">"Close the drawer with left hand by pushing it forward until it is fully closed and flush with the cabinet. The drawer is a wooden kitchen drawer currently in an open position, revealing utensils inside. The user's left hand should push the front edge of the drawer smoothly inward."</div>
+      </div>
+    </div>
+
+    <h3 class="subtitle">Contributions</h3>
+    <div class="contrib-grid">
+      <div class="contrib-card">
+        <div class="contrib-num">CONTRIBUTION I</div>
+        <div class="contrib-title">Novel Do-Undo Task Formulation</div>
+        <div class="contrib-body">Reversible, real-world action understanding that requires models to generate the visual outcome of an action and then accurately invert it. Tests cause-and-effect dynamics rather than superficial semantic cues.</div>
+      </div>
+      <div class="contrib-card">
+        <div class="contrib-num">CONTRIBUTION II</div>
+        <div class="contrib-title">Large-Scale Benchmark Dataset</div>
+        <div class="contrib-body">22,529 training and 451 test samples of reversible actions from Epic-Kitchens, with specialized prompt expansion generating ~120-word forward and reverse action prompts for precise instruction following.</div>
+      </div>
+      <div class="contrib-card">
+        <div class="contrib-num">CONTRIBUTION III</div>
+        <div class="contrib-title">Evaluation of State-of-the-Art Models</div>
+        <div class="contrib-body">Comprehensive zero-shot evaluation of Qwen-Image, BAGEL, and Flux Kontext demonstrates a fundamental gap: high semantic fidelity does not correlate with action understanding in current models.</div>
+      </div>
+      <div class="contrib-card">
+        <div class="contrib-num">CONTRIBUTION IV</div>
+        <div class="contrib-title">Baseline: BAGEL-DoUndo</div>
+        <div class="contrib-body">Fine-tuning BAGEL on the Do-Undo dataset demonstrates that explicit supervision on reversible actions improves fidelity and consistency of generated transformations, validating Do-Undo as a training signal.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- DATASET -->
+<section class="section" id="dataset">
+  <div class="container">
+    <h2 class="title">Dataset</h2>
+
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-number">22,529</div>
+        <div class="stat-label">Training image pairs with forward &amp; reverse annotations</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">451</div>
+        <div class="stat-label">Test samples balanced across 10 action classes</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">45,058</div>
+        <div class="stat-label">Total annotations (forward + reverse per sample)</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">~120</div>
+        <div class="stat-label">Average expanded prompt length in words</div>
+      </div>
+    </div>
+
+    <h3 class="subtitle">Data Curation Pipeline</h3>
+    <div class="pipeline-steps">
+      <div class="step-card">
+        <div class="step-number">01</div>
+        <div class="step-title">Frame Quality Filtering</div>
+        <div class="step-desc">Starting from Epic-Kitchens (100 video episodes), exclude frames with poor lighting or blur. Use Qwen2-VL-7B to verify background and action consistency.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">02</div>
+        <div class="step-title">Reversible Action Mining</div>
+        <div class="step-desc">Filter for physically reversible actions: pick-up, put-down, open, close, turn-on, turn-off, move, grab, place, remove. Irreversible actions (e.g. cut) are excluded.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">03</div>
+        <div class="step-title">Prompt Expansion</div>
+        <div class="step-desc">Short Epic-Kitchens narrations (avg 3 words) expanded to ~120-word prompts using Qwen3-VL, encoding object attributes, hand posture, and spatial context.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">04</div>
+        <div class="step-title">Human Verification</div>
+        <div class="step-desc">Secondary human annotation validates action consistency, background preservation, and that start/final images clearly demonstrate the action boundary.</div>
+      </div>
+    </div>
+
+    <h3 class="subtitle">Action Distribution (Test Set)</h3>
+    <div class="action-tags">
+      <span class="action-tag"><span class="verb">turn-on</span><span class="count">81</span></span>
+      <span class="action-tag"><span class="verb">turn-off</span><span class="count">78</span></span>
+      <span class="action-tag"><span class="verb">take</span><span class="count">61</span></span>
+      <span class="action-tag"><span class="verb">open</span><span class="count">56</span></span>
+      <span class="action-tag"><span class="verb">pick-up</span><span class="count">55</span></span>
+      <span class="action-tag"><span class="verb">put</span><span class="count">39</span></span>
+      <span class="action-tag"><span class="verb">put-down</span><span class="count">33</span></span>
+      <span class="action-tag"><span class="verb">get</span><span class="count">24</span></span>
+      <span class="action-tag"><span class="verb">close</span><span class="count">14</span></span>
+      <span class="action-tag"><span class="verb">move</span><span class="count">10</span></span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- RESULTS -->
+<section class="section" id="results">
+  <div class="container">
+    <h2 class="title">Results</h2>
+
+    <p style="text-align:center">
+      State-of-the-art models achieve high semantic fidelity but fail at action understanding — especially for the reverse (Undo) direction. High DINO scores do not correlate with high action accuracy.
+    </p>
+
+    <h3 class="subtitle">Zero-Shot Evaluation</h3>
+    <div class="table-wrap">
+      <table class="results">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>DINO-F ↑</th>
+            <th>DINO-R ↑</th>
+            <th>CLIP ↑</th>
+            <th class="do-col">A-F ↑</th>
+            <th class="undo-col">A-R ↑</th>
+            <th class="do-col">N-F ↑</th>
+            <th class="undo-col">N-R ↑</th>
+            <th>EPE-F ↓</th>
+            <th>EPE-R ↓</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="model">Qwen-Image</td>
+            <td>0.817</td><td>0.815</td><td>0.258</td>
+            <td>52.33</td><td>29.71</td><td>61.20</td><td>52.77</td>
+            <td>89.23</td><td>80.86</td>
+          </tr>
+          <tr>
+            <td class="model">BAGEL</td>
+            <td>0.793</td><td>0.796</td><td>0.262</td>
+            <td>57.87</td><td>33.48</td><td>55.65</td><td>50.55</td>
+            <td>121.0</td><td>94.07</td>
+          </tr>
+          <tr>
+            <td class="model">Flux Kontext</td>
+            <td>0.750</td><td>0.746</td><td>0.240</td>
+            <td>52.23</td><td>30.12</td><td>53.23</td><td>48.18</td>
+            <td>111.2</td><td>95.87</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="subtitle">Fine-Tuning with Do-Undo Training Signal</h3>
+    <div class="table-wrap">
+      <table class="results">
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>DINO-F ↑</th>
+            <th>DINO-R ↑</th>
+            <th>CLIP ↑</th>
+            <th class="do-col">A-F ↑</th>
+            <th class="undo-col">A-R ↑</th>
+            <th class="do-col">N-F ↑</th>
+            <th class="undo-col">N-R ↑</th>
+            <th>EPE-F ↓</th>
+            <th>EPE-R ↓</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="model">BAGEL</td>
+            <td>0.796</td><td>0.793</td><td>0.262</td>
+            <td>57.87</td><td>33.48</td><td>55.65</td><td>50.55</td>
+            <td>121.0</td><td>94.07</td>
+          </tr>
+          <tr>
+            <td class="model">BAGEL-Do(SP)</td>
+            <td>0.818</td><td>0.819</td><td>0.254</td>
+            <td>55.65</td><td>34.81</td><td>54.55</td><td>47.23</td>
+            <td>118.8</td><td>93.27</td>
+          </tr>
+          <tr>
+            <td class="model">BAGEL-Do</td>
+            <td>0.821</td><td>0.816</td><td>0.250</td>
+            <td>55.92</td><td>34.60</td><td>56.87</td><td>46.21</td>
+            <td>124.5</td><td>93.70</td>
+          </tr>
+          <tr class="ours">
+            <td class="model">BAGEL-DoUndo (Ours)</td>
+            <td class="best">0.836</td>
+            <td class="best">0.832</td>
+            <td>0.251</td>
+            <td class="best">58.77</td>
+            <td class="best">36.26</td>
+            <td class="best">58.53</td>
+            <td class="best">50.47</td>
+            <td class="best">118.4</td>
+            <td class="best">90.88</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="table-caption">BAGEL-DoUndo outperforms all baselines across both semantic and action understanding metrics.</div>
+    </div>
+
+    <div class="finding">
+      <strong>User study:</strong> BAGEL-DoUndo was preferred <strong>66.7%</strong> of the time vs. BAGEL (33.3%) for both semantic awareness and action understanding. Training with reverse image pairs is the critical component — forward-only training (BAGEL-Do) improves semantics but fails to induce action-conditioned understanding.
+    </div>
+
+    <h3 class="subtitle">Evaluation Metrics</h3>
+    <div class="metrics-cols">
+      <div class="metrics-group">
+        <div class="metrics-group-title">Semantic Awareness</div>
+        <div class="metric-row">
+          <div class="metric-name">DINO-F</div>
+          <div class="metric-desc">Similarity between generated forward image and ground-truth forward image</div>
+        </div>
+        <div class="metric-row">
+          <div class="metric-name">DINO-R</div>
+          <div class="metric-desc">Similarity between reverse image and original input — tests restoration quality</div>
+        </div>
+        <div class="metric-row">
+          <div class="metric-name">CLIP</div>
+          <div class="metric-desc">Similarity of generated forward image with ground-truth caption (accounts for diversity)</div>
+        </div>
+      </div>
+      <div class="metrics-group">
+        <div class="metrics-group-title">Action Understanding</div>
+        <div class="metric-row">
+          <div class="metric-name">A-F / A-R</div>
+          <div class="metric-desc">Action classifier accuracy on generated forward and reverse images (LaViLa-based)</div>
+        </div>
+        <div class="metric-row">
+          <div class="metric-name">N-F / N-R</div>
+          <div class="metric-desc">Object/noun accuracy in generated forward and reverse images</div>
+        </div>
+        <div class="metric-row">
+          <div class="metric-name">EPE ↓</div>
+          <div class="metric-desc">Optical flow error (RAFT) vs. ground-truth — measures physical plausibility of motion</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- BIBTEX -->
+<section class="section" id="bibtex">
+  <div class="container">
+    <h2 class="title">BibTeX</h2>
+    <div class="bibtex-block">@inproceedings{mahajan2026doundo,
+  title     = {Do-Undo Bench: Reversibility for Action Understanding
+               in Image Generation},
+  author    = {Mahajan, Shweta and Kadambi, Shreya and Le, Hoang and
+               Yasarla, Rajeev and Bhattacharyya, Apratim and
+               Hayat, Munawar and Porikli, Fatih},
+  booktitle = {},
+  year      = {2026}
+}</div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<footer>
+  <p>
+    <a href="https://arxiv.org/abs/your-arxiv-id">arXiv</a> &ensp;·&ensp;
+    <a href="https://github.com/s-mahajan/Do-Undo-Bench">GitHub</a> &ensp;·&ensp;
+    <a href="https://huggingface.co/datasets/doundo/doundobench">HuggingFace Dataset</a>
+  </p>
+  <p>York University &nbsp;·&nbsp; Vector Institute for AI &nbsp;·&nbsp; Qualcomm AI Research</p>
+  <p style="margin-top:0.5rem; font-size:0.72rem;">
+    Page template inspired by <a href="https://nerfies.github.io">Nerfies</a>.
+  </p>
+</footer>
+
+</body>
+</html>

@@ -129,3 +129,17 @@ Both scripts read Do-Undo-Bench JSON rows with these fields:
 
 Older CSV-style inputs are still partially supported through deprecated `--csv_path` / `--input_csv` aliases, but the recommended input is `../do-undo-bench/annotations_test.json` or `../do-undo-bench/annotations_train.json`.
 
+## Bibtex
+
+```
+@inproceedings{mahajan2026doundo,
+  title     = {Do-Undo Bench: Reversibility for Action Understanding
+               in Image Generation},
+  author    = {Mahajan, Shweta and Kadambi, Shreya and Le, Hoang and
+               Yasarla, Rajeev and Bhattacharyya, Apratim and
+               Hayat, Munawar and Porikli, Fatih},
+  booktitle = {arXiv preprint arXiv:2512.13609},
+  year      = {2026}
+}
+````
+
